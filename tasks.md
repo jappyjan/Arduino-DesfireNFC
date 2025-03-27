@@ -1,24 +1,33 @@
 # Arduino-DesfireNFC Library Implementation Tasks
 
+i have prepared a task list and protocol definitions for you.
+
+please work on the tasks one by one.
+when you finished a task, check it off and ask for review. do not continue until you got an approval.
+
 ## Setup & Project Structure
-- [ ] Create library.json manifest file with proper metadata
-- [ ] Set up basic library directory structure (src, include, examples)
-- [ ] Set up platformio.ini with proper ESP32 configuration
-- [ ] Create initial README.md with library description and usage examples
-- [ ] Set up unit test directory structure
-- [ ] Create contribution guidelines for community involvement
-- [ ] Set up CI/CD pipeline for automated testing
+- [x] Create library.json manifest file with proper metadata
+- [x] Set up basic library directory structure (src, include, examples)
+- [x] Set up platformio.ini with proper ESP32 configuration
+- [x] Create initial README.md with library description and usage examples
+- [x] Set up unit test directory structure
+- [x] Create contribution guidelines for community involvement
+- [x] Set up CI/CD pipeline for automated testing
 
 ## Dependencies & Hardware Layer
-- [ ] Research and select PN532 driver library for ESP32
-- [ ] Create hardware abstraction layer for PN532 communication
-- [ ] Implement low-level NFC reader interface class
-- [ ] Test basic communication with PN532 reader
-- [ ] Implement ISO14443A protocol layer for tag communication
-- [ ] Create basic card detection and anti-collision functionality
-- [ ] Document hardware abstraction layer API
-- [ ] Create example application demonstrating basic tag detection
-- [ ] Write unit tests for hardware communication layer
+- [x] Research and select PN532 driver library for ESP32
+- [x] Create hardware abstraction layer for PN532 communication
+- [x] Implement low-level NFC reader interface class
+- [x] Test basic communication with PN532 reader
+- [x] Implement ISO14443A protocol layer for tag communication
+- [x] Create basic card detection and anti-collision functionality
+- [x] Document hardware abstraction layer API
+- [x] Create example application demonstrating basic tag detection
+- [x] Write unit tests for hardware communication layer
+- [x] Fix linter errors in DesfireStatus.h (ISO status codes)
+- [x] Fix linter errors in DesfireNFC.cpp (API method errors)
+- [x] Fix build issues in test code
+- [x] Run hardware unit tests and validate functionality
 
 ## Core DESFire Protocol Implementation
 - [ ] Implement APDU command builder and parser
@@ -31,6 +40,7 @@
 - [ ] Document APDU command structure and status codes
 - [ ] Create example for card information retrieval
 - [ ] Write unit tests for command building and parsing
+- [ ] Run protocol implementation unit tests
 - [ ] Optimize command execution flow for speed
 
 ## Authentication & Cryptography
@@ -46,6 +56,7 @@
 - [ ] Document authentication processes with sequence diagrams
 - [ ] Create authentication example applications
 - [ ] Write unit tests for cryptographic functions
+- [ ] Run cryptography unit tests
 - [ ] Profile and optimize authentication performance
 
 ## Application & File Management
@@ -61,6 +72,7 @@
 - [ ] Document file types and operations
 - [ ] Create example applications for file operations
 - [ ] Write integration tests for file management
+- [ ] Run file management tests
 - [ ] Optimize memory usage for file operations
 
 ## ESP32-Specific Optimizations & Features
@@ -72,6 +84,8 @@
 - [ ] Implement command caching for repeated operations
 - [ ] Document ESP32-specific optimizations
 - [ ] Create example demonstrating async NFC operations
+- [ ] Write unit tests for ESP32-specific features
+- [ ] Run ESP32 optimization tests
 - [ ] Test and benchmark ESP32-specific features
 
 ## Deployment & Release
