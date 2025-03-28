@@ -57,11 +57,11 @@ public:
             return false;
         }
 
-        // For testing, just echo back the sent data
-        if (rxData && rxLength && *rxLength > 0 && txLength > 0) {
-            uint16_t copyLen = txLength < *rxLength ? txLength : *rxLength;
-            memcpy(rxData, txData, copyLen);
-            *rxLength = copyLen;
+        // For testing, return a standard 2-byte status response
+        if (rxData && rxLength && *rxLength >= 2) {
+            rxData[0] = 0x90;
+            rxData[1] = 0x00;
+            *rxLength = 2;
         }
 
         return true;

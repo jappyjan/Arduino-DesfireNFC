@@ -13,10 +13,16 @@
 class MockPN532 {
 public:
     MockPN532() {
-        _firmwareVersion  = 0x12345678;
-        _failDetectCard   = false;
-        _failDataExchange = false;
-        reset();
+        _firmwareVersion       = 0x12345678;  // Default
+        _failDetectCard        = false;
+        _failDataExchange      = false;
+        _beginCalled           = false;
+        _samConfigCalled       = false;
+        _detectCardCallCount   = 0;
+        _dataExchangeCallCount = 0;
+        _lastCommandSent       = 0;  // Initialize the member variable
+        _responseStatus        = 0x00;
+        _responseSubstatus     = 0x00;
     }
 
     void reset() {
@@ -146,7 +152,7 @@ private:
 // Custom PN532Reader implementation that uses our mock
 class TestPN532Reader : public NFCReaderInterface {
 public:
-    TestPN532Reader(MockPN532* mock) : _mock(mock) {
+    TestPN532Reader(MockPN532* mock) : _mock(mock), _lastCommandSent(0) {
     }
 
     bool begin() override {
@@ -209,6 +215,7 @@ public:
 
 private:
     MockPN532* _mock;
+    uint8_t    _lastCommandSent;
 };
 
 // Test fixture
