@@ -100,6 +100,43 @@ void loop() {
 
 For detailed documentation on the DESFire protocol and API reference, see the [docs](./docs) directory.
 
+## Development
+
+### Code Style
+
+This project uses a consistent coding style documented in [CODING_STYLE.md](docs/CODING_STYLE.md). Key points include:
+
+- Using `enum class` for type safety
+- Consistent naming conventions for enums, constants, and variables
+- Proper documentation with Doxygen-style comments
+
+### Setup Development Environment
+
+1. Clone this repository
+2. Install PlatformIO (recommended) or Arduino IDE
+3. Run the setup script to configure Git hooks:
+   ```
+   ./setup-git-hooks.sh
+   ```
+4. **Install required development tools:**
+   - **clang-format** (required for code formatting)
+   - **cppcheck** (required for static analysis)
+   
+   These tools are mandatory for development, and commits will be blocked if they're not installed. See [CODING_STYLE.md](docs/CODING_STYLE.md) for installation instructions.
+
+### Build Process
+
+```bash
+# Build the library
+pio run
+
+# Run tests
+pio test -e hardware_test
+
+# Lint code
+pio check
+```
+
 ## License
 
 This library is released under the MIT License. See [LICENSE](LICENSE) for details.

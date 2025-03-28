@@ -29,9 +29,39 @@ when you finished a task, check it off and ask for review. do not continue until
 - [x] Fix build issues in test code
 - [x] Run hardware unit tests and validate functionality
 
+
+## Lint and Build Issues
+- [x] Fix ISO7816Constants.h enumerator value overflow issue
+  - [x] Change ISO_MAX_APDU_SIZE type from uint8_t to uint16_t in ISO7816Constants enum
+  - [x] Update all code using ISO_MAX_APDU_SIZE to handle uint16_t instead of uint8_t
+  - [x] Verify compatibility with existing buffer sizes
+- [x] Resolve DesfireNFC.cpp enum usage issues
+  - [x] Fix macro/enum conflict in cryptographic mode definitions
+  - [x] Properly use DesfireCommand enum instead of macro constants
+  - [x] Fix member naming in DESFireCardVersion struct (productionBatchNumber vs productionWeek)
+  - [x] Update all code using these enums to use the correct enum member syntax
+- [x] Fix ISO7816APDU.cpp duplicate case value
+  - [x] Remove duplicated case for ISO_SW_WRONG_LENGTH in convertStatus method
+  - [x] Add proper comments to clarify status code handling
+- [x] Resolve PN532Reader.cpp redefined constant warning
+  - [x] Remove local PN532_MIFARE_ISO14443A definition
+  - [x] Use the Adafruit_PN532 library constant directly
+- [x] Fix platformio.ini issues
+  - [x] Update src_filter configuration to use build_src_filter as recommended
+  - [x] Add proper linting configuration
+- [x] Update project organization and build process
+  - [x] Implement consistent naming conventions for enums and constants
+    - Follow C++ style enum class for all enumerations (enum class)
+    - Use UPPER_SNAKE_CASE for enum members
+    - Use consistent prefixes: DF_ (DESFire), ISO_ (ISO7816), etc.
+    - Avoid #define macros for constants, use constexpr or enum class
+    - Follow Hungarian notation for variable names (e.g., uint8_t ui8Value)
+  - [x] Enforce uniform coding style
+  - [x] Add pre-commit linting hooks
+
 ## Core DESFire Protocol Implementation
-- [ ] Implement APDU command builder and parser
-- [ ] Create DESFire command constants and status code definitions
+- [x] Implement APDU command builder and parser
+- [x] Create DESFire command constants and status code definitions
 - [ ] Implement error handling and status code interpretation
 - [ ] Implement ISO 7816-4 APDU wrapping functionality
 - [ ] Create DESFire card version detection and information retrieval
