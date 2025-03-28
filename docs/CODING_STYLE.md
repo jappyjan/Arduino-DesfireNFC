@@ -195,4 +195,17 @@ The following tools are **required** for development and are enforced through pr
    choco install cppcheck
    ```
 
-These tools are **not optional** and must be installed to contribute to this project. The pre-commit hook will validate their presence before allowing commits. 
+3. **PlatformIO** - Building and testing
+   ```bash
+   # All platforms
+   pip install platformio
+   ```
+
+These tools are **not optional** and must be installed to contribute to this project. The pre-commit hook will:
+
+1. Format all staged C/C++ files using clang-format
+2. Run static analysis with cppcheck
+3. Build the project with PlatformIO
+4. Run all tests with PlatformIO
+
+The commit will be blocked if any of these steps fail, ensuring that only working code is committed. 

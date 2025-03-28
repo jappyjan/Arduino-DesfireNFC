@@ -1,0 +1,26 @@
+#!/bin/bash
+
+LOG_FILE="/tmp/pre-commit-debug.log"
+
+echo "Starting pre-commit debug hook..." | tee -a "$LOG_FILE"
+echo "Date: $(date)" | tee -a "$LOG_FILE"
+echo "Current directory: $(pwd)" | tee -a "$LOG_FILE"
+echo "Environment variables:" | tee -a "$LOG_FILE"
+env | tee -a "$LOG_FILE"
+
+echo "Path: $PATH" | tee -a "$LOG_FILE"
+echo "-----" | tee -a "$LOG_FILE"
+
+# Check for tools
+echo "Checking for required tools:" | tee -a "$LOG_FILE"
+command -v clang-format && echo "✓ clang-format found: $(which clang-format)" || echo "✗ clang-format not found" | tee -a "$LOG_FILE"
+command -v cppcheck && echo "✓ cppcheck found: $(which cppcheck)" || echo "✗ cppcheck not found" | tee -a "$LOG_FILE"
+command -v pio && echo "✓ pio found: $(which pio)" || echo "✗ pio not found" | tee -a "$LOG_FILE"
+
+# Get list of staged files
+echo "Staged files:" | tee -a "$LOG_FILE"
+git diff --cached --name-only | tee -a "$LOG_FILE"
+
+# Just return success for debugging
+echo "Debug pre-commit hook completed" | tee -a "$LOG_FILE"
+exit 0 

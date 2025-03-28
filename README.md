@@ -121,8 +121,9 @@ This project uses a consistent coding style documented in [CODING_STYLE.md](docs
 4. **Install required development tools:**
    - **clang-format** (required for code formatting)
    - **cppcheck** (required for static analysis)
+   - **PlatformIO** (required for building and testing)
    
-   These tools are mandatory for development, and commits will be blocked if they're not installed. See [CODING_STYLE.md](docs/CODING_STYLE.md) for installation instructions.
+   These tools are mandatory for development, and commits will be blocked if they're not installed or if tests fail. See [CODING_STYLE.md](docs/CODING_STYLE.md) for installation instructions.
 
 ### Build Process
 

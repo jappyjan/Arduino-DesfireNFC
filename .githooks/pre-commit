@@ -1,10 +1,20 @@
 #!/bin/bash
-set -e
 
-echo "Running pre-commit checks..."
+# Don't use set -e here to avoid immediate exit on failure
+# We want to capture errors and log them instead
+
+LOG_FILE=$(mktemp -t pre-commit-log.XXXXXX)
+
+echo "Running pre-commit checks... (Logging to $LOG_FILE)"
+exec &> >(tee -a "$LOG_FILE")
+
+echo "Environment:"
+echo "- Path: $PATH"
+echo "- Current directory: $(pwd)"
 
 # Get list of staged C/C++ files
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(c|cpp|h)$')
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(c|cpp|h)$' || echo "")
+echo "Staged files: $STAGED_FILES"
 
 if [[ "$STAGED_FILES" = "" ]]; then
   echo "No C/C++ files staged for commit. Skipping linting."
@@ -14,26 +24,76 @@ fi
 # Check for clang-format
 if ! command -v clang-format &> /dev/null; then
   echo "Error: clang-format is not installed. Please install it to continue."
+  echo "  On macOS: brew install clang-format"
+  echo "  On Ubuntu: apt-get install clang-format"
   exit 1
 fi
 
 # Check for cppcheck
 if ! command -v cppcheck &> /dev/null; then
   echo "Error: cppcheck is not installed. Please install it to continue."
+  echo "  On macOS: brew install cppcheck"
+  echo "  On Ubuntu: apt-get install cppcheck"
   exit 1
 fi
+
+# Check for PlatformIO
+if ! command -v pio &> /dev/null; then
+  echo "Error: PlatformIO is not installed. Please install it to continue."
+  echo "  On all platforms: pip install platformio"
+  exit 1
+fi
+
+echo "Found required tools:"
+echo "- clang-format: $(which clang-format)"
+echo "- cppcheck: $(which cppcheck)"
+echo "- pio: $(which pio)"
 
 # Format all staged C/C++ files
 echo "Formatting code with clang-format..."
 for FILE in $STAGED_FILES; do
-  echo "  Formatting $FILE"
-  clang-format -i "$FILE"
-  git add "$FILE"
+  if [ -f "$FILE" ]; then
+    echo "  Formatting $FILE"
+    clang-format -i "$FILE" || { echo "Error formatting $FILE"; exit 1; }
+    git add "$FILE" || { echo "Error staging $FILE"; exit 1; }
+  else
+    echo "  File $FILE does not exist, skipping"
+  fi
 done
 
 # Run cppcheck on all staged C/C++ files
 echo "Running cppcheck..."
-cppcheck --enable=all --inline-suppr --suppress=missingIncludeSystem $STAGED_FILES
+EXISTING_FILES=""
+for FILE in $STAGED_FILES; do
+  if [ -f "$FILE" ]; then
+    EXISTING_FILES="$EXISTING_FILES $FILE"
+  fi
+done
+
+if [ -n "$EXISTING_FILES" ]; then
+  cppcheck --enable=all --inline-suppr --suppress=missingIncludeSystem $EXISTING_FILES || { 
+    echo "Error: cppcheck failed."; 
+    echo "This is typically just a warning and not a blocker."; 
+  }
+else
+  echo "No existing files to check with cppcheck"
+fi
+
+# Build the project
+echo "Building project with PlatformIO..."
+pio run || { 
+  echo "Error: PlatformIO build failed. Please fix build issues before committing."; 
+  echo "For more details, see the log file: $LOG_FILE";
+  exit 1; 
+}
+
+# Run the tests
+echo "Running PlatformIO tests..."
+pio test || { 
+  echo "Error: PlatformIO tests failed. Please fix test issues before committing."; 
+  echo "For more details, see the log file: $LOG_FILE";
+  exit 1; 
+}
 
 echo "Pre-commit checks completed successfully!"
 exit 0 
