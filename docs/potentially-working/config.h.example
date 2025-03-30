@@ -1,0 +1,6 @@
+#define WLAN_SSID ""
+#define WLAN_PASS ""
+#define MQTT_BROKER ""
+#define MQTT_USERNAME ""
+#define MQTT_PASSWORD ""
+#define FABREADERID 1
