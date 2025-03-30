@@ -11,6 +11,10 @@
 #include <Adafruit_PN532.h>
 #include "NFCReaderInterface.h"
 
+// Default pin definitions for I2C mode - matching fabreader3
+#define PN532_IRQ 4
+#define PN532_RESET 5
+
 /**
  * @brief NFC reader implementation for PN532
  *
@@ -18,6 +22,21 @@
  */
 class PN532Reader : public NFCReaderInterface {
 public:
+    /**
+     * @brief Construct a new PN532Reader object with I2C communication using default pins
+     *
+     * This constructor matches the style used in fabreader3 and uses the default pins
+     * defined above (PN532_IRQ and PN532_RESET)
+     */
+    PN532Reader();
+
+    /**
+     * @brief Construct a new PN532Reader object with an existing Adafruit_PN532 instance
+     *
+     * @param nfc Existing PN532 instance that has already been initialized
+     */
+    PN532Reader(Adafruit_PN532* nfc);
+
     /**
      * @brief Construct a new PN532Reader object with I2C communication
      *

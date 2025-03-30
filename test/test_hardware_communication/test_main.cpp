@@ -75,30 +75,49 @@ public:
                         uint8_t* response,
                         uint8_t* responseLength) {
         _dataExchangeCallCount++;
-        _lastCommandSent = send[1];  // Store the command byte for verification
+        if (sendLength >= 2) {
+            _lastCommandSent = send[1];  // Store the command byte for verification
+        }
 
         if (_failDataExchange) {
             return false;
         }
 
         // Process based on DESFire command
-        switch (send[1]) {
-            case 0x60:  // Get Version command
-                response[0]     = _responseStatus;
-                response[1]     = _responseSubstatus;
-                *responseLength = 2;
-                break;
-            case 0x6A:  // Select Application
-                response[0]     = _responseStatus;
-                response[1]     = _responseSubstatus;
-                *responseLength = 2;
-                break;
-            default:
-                // Default response
-                response[0]     = _responseStatus;
-                response[1]     = _responseSubstatus;
-                *responseLength = 2;
-                break;
+        if (sendLength >= 2) {
+            uint8_t cmd = send[1];
+            switch (cmd) {
+                case 0x60:  // Get Version command
+                    response[0]     = _responseStatus;
+                    response[1]     = _responseSubstatus;
+                    *responseLength = 2;
+                    break;
+                case 0x5A:  // Select Application
+                    response[0]     = _responseStatus;
+                    response[1]     = _responseSubstatus;
+                    *responseLength = 2;
+                    break;
+                case 0x45:  // Get Free Memory
+                    // Return some memory value (20000 bytes) plus status
+                    response[0]     = 0x20;
+                    response[1]     = 0x4E;
+                    response[2]     = 0x00;
+                    response[3]     = _responseStatus;
+                    response[4]     = _responseSubstatus;
+                    *responseLength = 5;
+                    break;
+                default:
+                    // Default response
+                    response[0]     = _responseStatus;
+                    response[1]     = _responseSubstatus;
+                    *responseLength = 2;
+                    break;
+            }
+        } else {
+            // Invalid command
+            response[0]     = _responseStatus;
+            response[1]     = _responseSubstatus;
+            *responseLength = 2;
         }
 
         return true;
@@ -175,36 +194,53 @@ public:
                     uint16_t       txLength,
                     uint8_t*       rxData,
                     uint16_t*      rxLength) override {
-        // Store the last command sent for testing
-        if (txLength > 0) {
-            _lastCommandSent = txData[4];  // Command code is at index 4 in APDU
+        // In an ISO7816 APDU format for DESFire, the command structure is typically:
+        // [CLA, INS, P1, P2, Lc, Data...]
+        // For DESFire commands, the DESFire command is the first byte of the Data...
+        if (txLength >= 6) {
+            // Extract command
+            uint8_t cmdPos = 5;               // Position of the first data byte
+            uint8_t dfCmd  = txData[cmdPos];  // DESFire command
+
+            // Create buffer for MockPN532
+            uint8_t sendBuf[255];
+            uint8_t sendLen = 2;  // At minimum, includes command
+
+            // In a real PN532, there would be a header before the DESFire command
+            // For our mock, we just need the DESFire command at position 1
+            sendBuf[0] = 0xD4;   // Dummy header
+            sendBuf[1] = dfCmd;  // DESFire command
+
+            // Copy any data that follows the command
+            if (txLength > cmdPos + 1) {
+                uint8_t dataLen = txLength - (cmdPos + 1);
+                if (dataLen > 0) {
+                    memcpy(&sendBuf[2], &txData[cmdPos + 1], dataLen);
+                    sendLen += dataLen;
+                }
+            }
+
+            // Call the mock
+            uint8_t mockResponse[255];
+            uint8_t mockResponseLen = 0;
+
+            bool success = _mock->inDataExchange(sendBuf, sendLen, mockResponse, &mockResponseLen);
+
+            if (success && mockResponseLen > 0) {
+                // Copy the response
+                memcpy(rxData, mockResponse, mockResponseLen);
+                *rxLength = mockResponseLen;
+                return true;
+            } else {
+                *rxLength = 0;
+                return false;
+            }
         }
 
-        // Simulate DESFire responses based on the command
-        DesfireCommand cmd = static_cast<DesfireCommand>(txData[4]);
-        switch (cmd) {
-            case DesfireCommand::DF_CMD_GET_VERSION:
-                // Simulate GetVersion response (success)
-                rxData[0] = 0x90;  // SW1
-                rxData[1] = 0x00;  // SW2
-                *rxLength = 2;
-                break;
-
-            case DesfireCommand::DF_CMD_SELECT_APPLICATION:
-                // Simulate SelectApplication response (success)
-                rxData[0] = 0x90;  // SW1
-                rxData[1] = 0x00;  // SW2
-                *rxLength = 2;
-                break;
-
-            default:
-                // Default response (success)
-                rxData[0] = 0x90;  // SW1
-                rxData[1] = 0x00;  // SW2
-                *rxLength = 2;
-        }
-
-        // Return success
+        // Default case - shouldn't reach here in normal operation
+        rxData[0] = 0x91;  // DESFire success status
+        rxData[1] = 0x00;  // No error
+        *rxLength = 2;
         return true;
     }
 
@@ -288,10 +324,12 @@ void test_version_info(void) {
     mockPN532->setResponseStatus(0x91, 0x00);
 
     // Get version info
-    TEST_ASSERT_TRUE(nfc->getVersion());
-    // The command byte is stored at the second byte (index 1) of the APDU
-    // In the transceive method, the command is stored at _lastCommandSent
-    TEST_ASSERT_GREATER_THAN(0, mockPN532->getDataExchangeCallCount());
+    DesfireStatus status = nfc->getVersion();
+    Serial.print("Version test status: ");
+    Serial.println((int)status);
+
+    TEST_ASSERT_EQUAL(DesfireStatus::DFST_SUCCESS, status);
+    TEST_ASSERT_TRUE(mockPN532->getDataExchangeCallCount() > 0);
 }
 
 void process(void) {

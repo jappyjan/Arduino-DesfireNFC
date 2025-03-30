@@ -11,6 +11,35 @@
 #define PN532_CONN_HSU 2
 
 /**
+ * @brief Construct a new PN532Reader object with I2C communication using default pins
+ *
+ * This constructor matches the style used in fabreader3
+ */
+PN532Reader::PN532Reader() {
+    // Create PN532 with default pins (PN532_IRQ, PN532_RESET)
+    _nfc            = new Adafruit_PN532(PN532_IRQ, PN532_RESET);
+    _ownNFC         = true;
+    _connectionType = PN532_CONN_I2C;
+
+#if defined(ESP32) || defined(ESP8266)
+    // Allow more time for the PN532 to initialize on ESP32
+    delay(200);
+#endif
+}
+
+/**
+ * @brief Construct a new PN532Reader object with an existing Adafruit_PN532 instance
+ *
+ * @param nfc Existing PN532 instance that has already been initialized
+ */
+PN532Reader::PN532Reader(Adafruit_PN532* nfc) {
+    // Use the provided PN532 instance
+    _nfc            = nfc;
+    _ownNFC         = false;  // We don't own this instance, so don't delete it in the destructor
+    _connectionType = PN532_CONN_I2C;  // Assume I2C connection
+}
+
+/**
  * @brief Construct a new PN532Reader object with I2C communication
  *
  * @param irq IRQ pin connected to the PN532
@@ -21,6 +50,11 @@ PN532Reader::PN532Reader(uint8_t irq, uint8_t reset, TwoWire& wire) {
     _nfc            = new Adafruit_PN532(irq, reset, &wire);
     _ownNFC         = true;
     _connectionType = PN532_CONN_I2C;
+
+#if defined(ESP32) || defined(ESP8266)
+    // Allow more time for the PN532 to initialize on ESP32
+    delay(200);
+#endif
 }
 
 /**
@@ -63,10 +97,60 @@ PN532Reader::~PN532Reader() {
  * @return false if initialization failed
  */
 bool PN532Reader::begin() {
+    // For ESP32, use a longer delay before initialization to stabilize I2C
+#if defined(ESP32) || defined(ESP8266)
+    delay(100);
+#endif
+
+    // Initialize the PN532
     _nfc->begin();
 
-    uint32_t versiondata = _nfc->getFirmwareVersion();
+    // Add retry mechanism for better reliability
+    uint32_t versiondata = 0;
+    int      retries     = 5;  // Try up to 5 times for ESP32 (was 3)
+
+    while (retries > 0) {
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+        // Output debug info
+        Serial.print("Attempt ");
+        Serial.print(6 - retries);
+        Serial.print(" to get firmware version... ");
+#endif
+
+        versiondata = _nfc->getFirmwareVersion();
+        if (versiondata) {
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+            Serial.println("Success!");
+            // Print firmware version details
+            Serial.print("Found chip PN5");
+            Serial.print((versiondata >> 24) & 0xFF, HEX);
+            Serial.print(", Firmware ver. ");
+            Serial.print((versiondata >> 16) & 0xFF, DEC);
+            Serial.print('.');
+            Serial.println((versiondata >> 8) & 0xFF, DEC);
+#endif
+            break;  // Successfully got firmware version
+        }
+
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+        Serial.println("Failed.");
+#endif
+
+        // Wait between retries with increasing delay
+        int delay_time = 100 * (6 - retries);
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+        Serial.print("Waiting ");
+        Serial.print(delay_time);
+        Serial.println("ms before retry...");
+#endif
+        delay(delay_time);
+        retries--;
+    }
+
     if (!versiondata) {
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+        Serial.println("Failed to find PN53x board after multiple attempts");
+#endif
         return false;
     }
 
@@ -89,7 +173,22 @@ uint32_t PN532Reader::getFirmwareVersion() {
  * @return false if configuration failed
  */
 bool PN532Reader::configure() {
-    if (!_nfc->SAMConfig()) {
+    // Add retry mechanism for SAMConfig
+    int  retries = 3;  // Try up to 3 times
+    bool success = false;
+
+    while (retries > 0) {
+        success = _nfc->SAMConfig();
+        if (success) {
+            break;  // Successfully configured
+        }
+
+        // Wait between retries with increasing delay
+        delay(100 * (4 - retries));
+        retries--;
+    }
+
+    if (!success) {
         return false;
     }
 
@@ -108,7 +207,22 @@ bool PN532Reader::configure() {
  * @return false if no card was detected
  */
 bool PN532Reader::detectCard(uint8_t* uid, uint8_t* uidLength) {
-    return _nfc->readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, uidLength);
+    // Add retry mechanism for better reliability with card detection
+    int  retries = 2;  // Try up to 2 times
+    bool success = false;
+
+    while (retries > 0) {
+        success = _nfc->readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, uidLength, 1000);
+        if (success) {
+            break;  // Successfully detected card
+        }
+
+        // Wait between retries
+        delay(50);
+        retries--;
+    }
+
+    return success;
 }
 
 /**
@@ -129,10 +243,25 @@ bool PN532Reader::transceive(const uint8_t* txData,
     // Note: We need to cast rxLength to uint8_t* for compatibility with the underlying library
     // This is safe as long as the rxLength value doesn't exceed 255
     uint8_t rxLen8 = *rxLength > 255 ? 255 : static_cast<uint8_t>(*rxLength);
-    bool    result = _nfc->inDataExchange(const_cast<uint8_t*>(txData),
+
+    // Add retry mechanism for better reliability with transceive
+    int  retries = 2;  // Try up to 2 times
+    bool success = false;
+
+    while (retries > 0) {
+        success = _nfc->inDataExchange(const_cast<uint8_t*>(txData),
                                        static_cast<uint8_t>(txLength > 255 ? 255 : txLength),
                                        rxData,
                                        &rxLen8);
-    *rxLength      = rxLen8;
-    return result;
+        if (success) {
+            break;  // Successfully exchanged data
+        }
+
+        // Wait between retries
+        delay(50);
+        retries--;
+    }
+
+    *rxLength = rxLen8;
+    return success;
 }
